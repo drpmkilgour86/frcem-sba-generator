@@ -1,9 +1,8 @@
 import streamlit as st
-import os
-from openai import OpenAI
 from PyPDF2 import PdfReader
+from openai import OpenAI
 
-# Use OpenAI key from Streamlit secrets
+# Set up the OpenAI client using the new SDK (v1.0+)
 client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 
 def extract_text_from_pdf(uploaded_file):
@@ -38,9 +37,9 @@ Guideline excerpt:
 Format:
 - Provide a clinical stem
 - A lead-in question
-- 5 options (A-E)
+- 5 options (A–E)
 - Indicate the correct answer
-- Provide a 2-3 sentence explanation
+- Provide a 2–3 sentence explanation
 - Include a direct quote from the guideline supporting the correct answer
 
 Example of a poorly balanced question:
@@ -62,13 +61,13 @@ A 90-year-old woman complains of neck pain and limb weakness following a fall fr
 
 Which of the following examination findings is most associated with the spinal cord syndrome likely caused by this fall?
 
-A: Hyperesthesia of the arms
-B: Bilateral flaccid paralysis of all limbs
-C: Decreased peri-anal sensation
-D: Bilateral sensory loss of all limbs
+A: Hyperesthesia of the arms  
+B: Bilateral flaccid paralysis of all limbs  
+C: Decreased peri-anal sensation  
+D: Bilateral sensory loss of all limbs  
 E: Decreased proprioception and vibration sense in the lower limbs
 
-Correct Answer: A
+Correct Answer: A  
 Explanation: This presentation is consistent with central cord syndrome, which is classically associated with hyperextension injuries in elderly patients with cervical spondylosis. It disproportionately affects the upper limbs, often presenting with hyperesthesia or weakness in the arms more than the legs.
 """
 
@@ -111,6 +110,6 @@ if st.button("Generate Questions") and topic and uploaded_file:
     if st.button("Submit Answers"):
         st.subheader("Answers and Explanations:")
         for i, block in enumerate(question_texts):
-            st.markdown(f"**Question {i+1}**\n")
+            st.markdown(f"**Question {i+1}**")
             st.markdown(block)
-            st.markdown(f"**Your answer:** {user_answers[i]}\n")
+            st.markdown(f"**Your answer:** {user_answers[i]}")
