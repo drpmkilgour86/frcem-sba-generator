@@ -1,11 +1,12 @@
 import streamlit as st
-import os
 import openai
+import os
 from PyPDF2 import PdfReader
 
-# Use the OpenAI v1.0+ client correctly
+# Securely load your API key from Streamlit secrets
 client = openai.OpenAI(api_key=st.secrets["openai_api_key"])
 
+# PDF text extraction
 def extract_text_from_pdf(uploaded_file):
     reader = PdfReader(uploaded_file)
     text = ""
@@ -13,6 +14,7 @@ def extract_text_from_pdf(uploaded_file):
         text += page.extract_text() or ""
     return text
 
+# Prompt builder for high-complexity FRCEM SBA questions
 def build_prompt(topic, guideline_text, num_questions=1):
     return f"""
 You are a consultant-level Emergency Medicine educator creating advanced SBA questions for the FRCEM Final SBA Exam (UK).
@@ -35,15 +37,16 @@ Instructions:
 Guideline excerpt:
 {guideline_text[:2000] if guideline_text else '[None provided]'}
 
-Format:
+Format (for each of {num_questions} questions):
 - Provide a clinical stem
 - A lead-in question
-- 5 options (A–E)
+- 5 options (A-E)
 - Indicate the correct answer
-- Provide a 2–3 sentence explanation
+- Provide a 2-3 sentence explanation
 - Include a direct quote from the guideline supporting the correct answer
 """
 
+# Generate questions using OpenAI
 def generate_sba(topic, guideline_text, num_questions=1):
     prompt = build_prompt(topic, guideline_text, num_questions)
     response = client.chat.completions.create(
@@ -55,36 +58,43 @@ def generate_sba(topic, guideline_text, num_questions=1):
 
 # Streamlit interface
 st.title("FRCEM Final SBA Question Generator")
-
 topic = st.text_input("Enter a curriculum topic:")
 uploaded_file = st.file_uploader("Upload a relevant guideline (PDF only)", type="pdf")
 num_questions = st.number_input("Number of questions", min_value=1, max_value=10, value=3)
 
 if st.button("Generate Questions") and topic and uploaded_file:
-    with st.spinner("Extracting guideline text and generating questions..."):
+    with st.spinner("Extracting guideline and generating questions..."):
         guideline_text = extract_text_from_pdf(uploaded_file)
-        questions = generate_sba(topic, guideline_text, num_questions)
+        try:
+            questions = generate_sba(topic, guideline_text, num_questions)
+        except Exception as e:
+            st.error(f"Error generating questions: {e}")
+            st.stop()
+
+    if not questions or "Correct Answer:" not in questions:
+        st.warning("No valid questions were generated. Try another topic or guideline.")
+        st.stop()
 
     st.subheader("Generated Questions:")
-    question_blocks = questions.strip().split("\n\n")
+    raw_blocks = questions.strip().split("Correct Answer:")
+    question_blocks = []
+
+    for i in range(len(raw_blocks) - 1):
+        block = raw_blocks[i].strip() + "\nCorrect Answer:" + raw_blocks[i + 1].strip().split("\n")[0]
+        remainder = "\n".join(raw_blocks[i + 1].strip().split("\n")[1:])
+        explanation = remainder.strip()
+        question_blocks.append((block, explanation))
 
     user_answers = []
-    question_texts = []
 
-    for i, block in enumerate(question_blocks):
-        if "Correct Answer:" in block:
-            split_block = block.split("Correct Answer:")
-            question_part = split_block[0].strip()
-            st.markdown(f"**Question {i+1}**\n")
-            st.markdown(question_part)
-            options = ["A", "B", "C", "D", "E"]
-            answer = st.selectbox(f"Your answer to Question {i+1}", options, key=f"answer_{i}")
-            user_answers.append(answer)
-            question_texts.append(block)
+    for i, (question_text, explanation) in enumerate(question_blocks):
+        st.markdown(f"**Question {i+1}**")
+        st.markdown(question_text)
+        answer = st.selectbox(f"Your answer to Question {i+1}", ["A", "B", "C", "D", "E"], key=f"answer_{i}")
+        user_answers.append((answer, explanation))
 
     if st.button("Submit Answers"):
         st.subheader("Answers and Explanations:")
-        for i, block in enumerate(question_texts):
-            st.markdown(f"**Question {i+1}**")
-            st.markdown(block)
-            st.markdown(f"**Your answer:** {user_answers[i]}")
+        for i, (user_answer, explanation) in enumerate(user_answers):
+            st.markdown(f"**Question {i+1} – Your answer:** {user_answer}")
+            st.markdown(f"**Explanation:** {explanation}")
