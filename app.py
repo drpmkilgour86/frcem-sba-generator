@@ -1,12 +1,11 @@
 import streamlit as st
+import openai
 import os
 from PyPDF2 import PdfReader
-from openai import OpenAI
 
-# Securely use your API key from Streamlit secrets
-client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
+# Load API key securely from Streamlit secrets
+openai.api_key = st.secrets["OPENAI_API_KEY"]
 
-# Extract text from uploaded PDF
 def extract_text_from_pdf(uploaded_file):
     reader = PdfReader(uploaded_file)
     text = ""
@@ -14,70 +13,57 @@ def extract_text_from_pdf(uploaded_file):
         text += page.extract_text() or ""
     return text
 
-# Build the prompt with strong difficulty and quality constraints
 def build_prompt(topic, guideline_text, num_questions=1):
     return f"""
 You are a consultant-level Emergency Medicine educator creating advanced SBA questions for the FRCEM Final SBA Exam (UK).
 
 Instructions:
-- Only use the information from the guideline below. Do not use general textbook knowledge.
+- Use only the information from the guideline below (no general knowledge).
 - Avoid recall-style or fact-based questions.
-- Questions should test complex clinical judgment, synthesis, or prioritisation.
-- Choose less obvious, nuanced, or controversial areas from the guideline.
-- Aim for high cognitive complexity (e.g., interpretation of findings, management prioritisation).
-- Ensure distractors are:
-    - Plausible
-    - Internally consistent
-    - Mutually exclusive
-    - Equal in difficulty and tone to the correct answer
-- All options should test the same conceptual level and not be obviously incorrect.
-- Quote directly from the guideline to justify the correct answer after each explanation.
-- Target difficulty: suitable for UK consultant-level candidates (e.g., FRCEM Final), aiming for facility index ~0.5.
+- Test complex clinical judgment, prioritisation, or synthesis.
+- Choose nuanced or difficult guideline-based areas.
+- Ensure all options are plausible, internally consistent, mutually exclusive, and equal in tone.
+- Quote directly from the guideline to justify the correct answer.
+- Use 5 options per question (A-E).
+- Target high difficulty (FRCEM Final standard, facility index ~0.5).
 
 Guideline excerpt:
 {guideline_text[:2000] if guideline_text else '[None provided]'}
 
-Format:
-- Provide a clinical stem
-- A lead-in question
-- 5 options (A-E)
-- Indicate the correct answer
-- Provide a 2-3 sentence explanation
-- Include a direct quote from the guideline supporting the correct answer
+Format for each question:
+- Clinical scenario (stem)
+- Lead-in question
+- 5 answer options (A–E)
+- Indicate correct answer
+- 2–3 sentence explanation
+- Include supporting quote from the guideline
 
-Example of a well-crafted, difficult question:
-A 90-year-old woman complains of neck pain and limb weakness following a fall from standing on to the face. A CT-scan of the cervical spine shows only degenerative changes with no fracture.
+Example of a poor question (too easy or unbalanced):
+Clinical Scenario: A 42-year-old marathon runner collapses immediately after finishing a race. On arrival of the emergency medical team, the patient is unresponsive, apneic, and pulseless...
+Correct Answer: C
+Explanation: ...
 
-Which of the following examination findings is most associated with the spinal cord syndrome likely caused by this fall?
-
-A: Hyperesthesia of the arms
-B: Bilateral flaccid paralysis of all limbs
-C: Decreased peri-anal sensation
-D: Bilateral sensory loss of all limbs
-E: Decreased proprioception and vibration sense in the lower limbs
-
+Example of a well-constructed, challenging question:
+A 90-year-old woman complains of neck pain and limb weakness following a fall onto her face...
 Correct Answer: A
-Explanation: This presentation is consistent with central cord syndrome, which is classically associated with hyperextension injuries in elderly patients with cervical spondylosis. It disproportionately affects the upper limbs, often presenting with hyperesthesia or weakness in the arms more than the legs.
+Explanation: ...
 """
 
-# Use new OpenAI SDK v1.0 method
 def generate_sba(topic, guideline_text, num_questions=1):
     prompt = build_prompt(topic, guideline_text, num_questions)
-
-    response = client.chat.completions.create(
+    response = openai.chat.completions.create(
         model="gpt-4-turbo",
         messages=[{"role": "user", "content": prompt}],
         temperature=0.9
     )
-
     return response.choices[0].message.content
 
-# Streamlit interface
+# Streamlit App
 st.title("FRCEM Final SBA Question Generator")
 
 topic = st.text_input("Enter a curriculum topic:")
 uploaded_file = st.file_uploader("Upload a relevant guideline (PDF only)", type="pdf")
-num_questions = st.number_input("Number of questions to generate", min_value=1, max_value=10, value=3)
+num_questions = st.number_input("Number of questions", min_value=1, max_value=10, value=3)
 
 if st.button("Generate Questions") and topic and uploaded_file:
     with st.spinner("Generating questions..."):
@@ -85,24 +71,31 @@ if st.button("Generate Questions") and topic and uploaded_file:
         questions = generate_sba(topic, guideline_text, num_questions)
 
     st.subheader("Generated Questions:")
-    question_blocks = questions.strip().split("\n\n")
+
+    # Split each question block before "Correct Answer"
+    question_blocks = questions.split("Correct Answer:")
     user_answers = []
-    question_texts = []
+    reconstructed_blocks = []
 
-    for i, block in enumerate(question_blocks):
-        if "Correct Answer:" in block:
-            split_block = block.split("Correct Answer:")
-            question_part = split_block[0].strip()
+    if len(question_blocks) <= 1:
+        st.error("No questions were generated. Please check the guideline or try again.")
+    else:
+        for i in range(len(question_blocks) - 1):
+            full_question = question_blocks[i].strip() + "\n\nCorrect Answer:" + question_blocks[i + 1].split("\n")[0].strip()
+            reconstructed_blocks.append(full_question)
+
+        for i, block in enumerate(reconstructed_blocks):
+            lines = block.strip().split("\n")
+            visible_part = "\n".join([line for line in lines if not line.startswith("Correct Answer:")])
             st.markdown(f"**Question {i+1}**")
-            st.markdown(question_part)
+            st.markdown(visible_part)
             options = ["A", "B", "C", "D", "E"]
-            answer = st.selectbox(f"Your answer to Question {i+1}", options, key=f"answer_{i}")
-            user_answers.append(answer)
-            question_texts.append(block)
+            user_choice = st.selectbox(f"Your answer to Question {i+1}", options, key=f"q_{i}")
+            user_answers.append(user_choice)
 
-    if st.button("Submit Answers"):
-        st.subheader("Answers and Explanations:")
-        for i, block in enumerate(question_texts):
-            st.markdown(f"**Question {i+1}**")
-            st.markdown(block)
-            st.markdown(f"**Your answer:** {user_answers[i]}")
+        if st.button("Submit Answers"):
+            st.subheader("Answers and Explanations:")
+            for i, block in enumerate(reconstructed_blocks):
+                st.markdown(f"**Question {i+1}**")
+                st.markdown(block)
+                st.markdown(f"**Your answer:** {user_answers[i]}")
