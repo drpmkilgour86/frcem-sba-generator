@@ -2,10 +2,9 @@ import streamlit as st
 import openai
 from PyPDF2 import PdfReader
 
-# Use OpenAI API key from Streamlit secrets
-client = openai.OpenAI(api_key=st.secrets["openai_api_key"])
+# Use OpenAI API key from Streamlit Cloud secrets
+openai.api_key = st.secrets["openai_api_key"]
 
-# Extract text from uploaded PDF
 def extract_text_from_pdf(uploaded_file):
     reader = PdfReader(uploaded_file)
     text = ""
@@ -13,7 +12,6 @@ def extract_text_from_pdf(uploaded_file):
         text += page.extract_text() or ""
     return text
 
-# Build prompt
 def build_prompt(topic, guideline_text, num_questions=1):
     return f"""
 You are a consultant-level Emergency Medicine educator creating advanced SBA questions for the FRCEM Final SBA Exam (UK).
@@ -44,11 +42,10 @@ Format:
 - Explanation
 """
 
-# Generate questions using GPT-4 Turbo
 def generate_sba(topic, guideline_text, num_questions=1):
     prompt = build_prompt(topic, guideline_text, num_questions)
     try:
-        response = client.chat.completions.create(
+        response = openai.ChatCompletion.create(
             model="gpt-4-turbo",
             messages=[{"role": "user", "content": prompt}],
             temperature=0.9
@@ -60,7 +57,6 @@ def generate_sba(topic, guideline_text, num_questions=1):
 
 # Streamlit UI
 st.title("FRCEM Final SBA Question Generator")
-
 topic = st.text_input("Enter a curriculum topic:")
 uploaded_file = st.file_uploader("Upload a relevant guideline (PDF only)", type="pdf")
 num_questions = st.number_input("Number of questions", min_value=1, max_value=10, value=3)
