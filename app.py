@@ -5,7 +5,7 @@ from PyPDF2 import PdfReader
 
 # Set your OpenAI API key here (replace with your actual key)
 import os
-openai.api_key = os.getenv("OPENAI_API_KEY")
+openai.api_key = st.secrets["OPENAI_API_KEY"]
 
 
 def extract_text_from_pdf(uploaded_file):
