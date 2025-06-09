@@ -3,18 +3,15 @@ import openai
 import os
 from PyPDF2 import PdfReader
 
-# Securely load your API key from Streamlit secrets
+# Authenticate with OpenAI using Streamlit secrets
 client = openai.OpenAI(api_key=st.secrets["openai_api_key"])
 
-# PDF text extraction
+# Extract text from uploaded guideline
 def extract_text_from_pdf(uploaded_file):
     reader = PdfReader(uploaded_file)
-    text = ""
-    for page in reader.pages:
-        text += page.extract_text() or ""
-    return text
+    return "".join(page.extract_text() or "" for page in reader.pages)
 
-# Prompt builder for high-complexity FRCEM SBA questions
+# Build the AI prompt
 def build_prompt(topic, guideline_text, num_questions=1):
     return f"""
 You are a consultant-level Emergency Medicine educator creating advanced SBA questions for the FRCEM Final SBA Exam (UK).
@@ -22,31 +19,28 @@ You are a consultant-level Emergency Medicine educator creating advanced SBA que
 Instructions:
 - Only use the information from the guideline below. Do not use general textbook knowledge.
 - Avoid recall-style or fact-based questions.
-- Questions should test complex clinical judgment, synthesis, or prioritisation.
 - Choose less obvious, nuanced, or controversial areas from the guideline.
-- Aim for high cognitive complexity (e.g., interpretation of findings, management prioritisation).
-- Ensure distractors are:
-    - Plausible
-    - Internally consistent
-    - Mutually exclusive
-    - Equal in difficulty and tone to the correct answer
-- All options should test the same conceptual level and not be obviously incorrect.
-- Quote directly from the guideline to justify the correct answer after each explanation.
-- Target difficulty: suitable for UK consultant-level candidates (e.g., FRCEM Final), aiming for facility index ~0.5.
+- Ensure distractors are plausible, internally consistent, mutually exclusive, and all plausible.
+- All options should test the same conceptual level.
+- Quote directly from the guideline to justify the correct answer.
 
 Guideline excerpt:
-{guideline_text[:2000] if guideline_text else '[None provided]'}
+{guideline_text[:2000]}
 
-Format (for each of {num_questions} questions):
-- Provide a clinical stem
-- A lead-in question
-- 5 options (A-E)
-- Indicate the correct answer
-- Provide a 2-3 sentence explanation
-- Include a direct quote from the guideline supporting the correct answer
+Generate {num_questions} questions. Format each like:
+Clinical Scenario:
+Lead-in Question:
+A. Option
+B. Option
+C. Option
+D. Option
+E. Option
+Correct Answer: [Letter]
+Explanation: [Short explanation]
+Guideline Quote: [Exact quote from the PDF]
 """
 
-# Generate questions using OpenAI
+# Generate SBA questions from prompt
 def generate_sba(topic, guideline_text, num_questions=1):
     prompt = build_prompt(topic, guideline_text, num_questions)
     response = client.chat.completions.create(
@@ -56,45 +50,49 @@ def generate_sba(topic, guideline_text, num_questions=1):
     )
     return response.choices[0].message.content
 
-# Streamlit interface
+# Streamlit app layout
 st.title("FRCEM Final SBA Question Generator")
+
+# Topic input
 topic = st.text_input("Enter a curriculum topic:")
+
+# File uploader
 uploaded_file = st.file_uploader("Upload a relevant guideline (PDF only)", type="pdf")
+
+# Retain extracted guideline text
+if uploaded_file:
+    st.session_state["guideline_text"] = extract_text_from_pdf(uploaded_file)
+
+# Number of questions
 num_questions = st.number_input("Number of questions", min_value=1, max_value=10, value=3)
 
-if st.button("Generate Questions") and topic and uploaded_file:
-    with st.spinner("Extracting guideline and generating questions..."):
-        guideline_text = extract_text_from_pdf(uploaded_file)
-        try:
-            questions = generate_sba(topic, guideline_text, num_questions)
-        except Exception as e:
-            st.error(f"Error generating questions: {e}")
-            st.stop()
+# Generate button
+if st.button("Generate Questions") and topic and "guideline_text" in st.session_state:
+    with st.spinner("Generating questions..."):
+        questions = generate_sba(topic, st.session_state["guideline_text"], num_questions)
+        st.session_state["questions"] = questions
 
-    if not questions or "Correct Answer:" not in questions:
-        st.warning("No valid questions were generated. Try another topic or guideline.")
-        st.stop()
-
+# Display questions only if they exist
+if "questions" in st.session_state:
     st.subheader("Generated Questions:")
-    raw_blocks = questions.strip().split("Correct Answer:")
-    question_blocks = []
-
-    for i in range(len(raw_blocks) - 1):
-        block = raw_blocks[i].strip() + "\nCorrect Answer:" + raw_blocks[i + 1].strip().split("\n")[0]
-        remainder = "\n".join(raw_blocks[i + 1].strip().split("\n")[1:])
-        explanation = remainder.strip()
-        question_blocks.append((block, explanation))
+    question_blocks = st.session_state["questions"].strip().split("\n\n")
 
     user_answers = []
+    question_texts = []
 
-    for i, (question_text, explanation) in enumerate(question_blocks):
-        st.markdown(f"**Question {i+1}**")
-        st.markdown(question_text)
-        answer = st.selectbox(f"Your answer to Question {i+1}", ["A", "B", "C", "D", "E"], key=f"answer_{i}")
-        user_answers.append((answer, explanation))
+    for i, block in enumerate(question_blocks):
+        if "Correct Answer:" in block:
+            question_part = block.split("Correct Answer:")[0].strip()
+            st.markdown(f"**Question {i+1}**")
+            st.markdown(question_part)
+            options = ["A", "B", "C", "D", "E"]
+            answer = st.selectbox(f"Your answer to Question {i+1}", options, key=f"answer_{i}")
+            user_answers.append(answer)
+            question_texts.append(block)
 
     if st.button("Submit Answers"):
         st.subheader("Answers and Explanations:")
-        for i, (user_answer, explanation) in enumerate(user_answers):
-            st.markdown(f"**Question {i+1} – Your answer:** {user_answer}")
-            st.markdown(f"**Explanation:** {explanation}")
+        for i, block in enumerate(question_texts):
+            st.markdown(f"**Question {i+1}**")
+            st.markdown(block)
+            st.markdown(f"**Your answer:** {user_answers[i]}")
