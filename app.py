@@ -2,9 +2,10 @@ import streamlit as st
 import openai
 from PyPDF2 import PdfReader
 
-# Initialise the OpenAI client using the new v1.0+ SDK format
+# Use OpenAI API key from Streamlit secrets
 client = openai.OpenAI(api_key=st.secrets["openai_api_key"])
 
+# Extract text from uploaded PDF
 def extract_text_from_pdf(uploaded_file):
     reader = PdfReader(uploaded_file)
     text = ""
@@ -12,17 +13,29 @@ def extract_text_from_pdf(uploaded_file):
         text += page.extract_text() or ""
     return text
 
+# UPDATED build_prompt
 def build_prompt(topic, guideline_text, num_questions=1):
     return f"""
 You are a consultant-level Emergency Medicine educator creating advanced Single Best Answer (SBA) questions for the FRCEM Final SBA Exam (UK).
 
 Instructions:
-- Only use the content from the uploaded guideline below. Do not use general textbook knowledge.
-- Do not generate recall-style questions (e.g., simple factual statements or definitions).
-- Avoid American healthcare terminology. Use British English (e.g., "A+E" or "ED", not "ER").
-- Ensure questions reflect the level of clinical reasoning expected of UK Emergency Medicine consultants.
-- Focus on applying, synthesising, or interpreting complex clinical data.
-- Avoid obvious answers. Distractors must be plausible, internally consistent, and test the same conceptual level.
+- Base all questions **only** on the content from the uploaded guideline below. Do **not** use general textbook knowledge.
+- Do **not** generate recall-style questions (e.g., definitions or memorised facts).
+- Use **British English healthcare terminology** (e.g., "ED", "A+E", "resuscitation room", "paracetamol"), not American terms (e.g., "ER", "acetaminophen").
+- Questions must assess **clinical judgment**, **interpretation**, or **management decisions**, not superficial recall.
+- To increase difficulty:
+    - Give **clues to the diagnosis in the clinical stem**, but do **not** name the diagnosis directly.
+    - Candidates should have to **infer the diagnosis** and then apply clinical reasoning to select the correct option.
+- Use **specific numerical values** (e.g., HR, Na+, BP) in stems rather than vague terms like “high” or “low”.
+    - Ensure values are **internally consistent** (e.g., if the question is about AF with fast ventricular response, heart rate should be >120 bpm).
+- Avoid giveaway phrases like “as per the guideline recommendation” in any answer option.
+- Ensure all answer choices are:
+    - Plausible
+    - Internally consistent (e.g., do **not** offer “prostatitis” in a question about LUTS in a female)
+    - Mutually exclusive
+    - Equal in complexity and tone
+    - Sufficiently challenging to a senior Emergency Medicine trainee
+- Difficulty target: suitable for UK consultant-level candidates (FRCEM Final SBA), aiming for a facility index ~0.5.
 
 Guideline excerpt:
 {guideline_text[:2000] if guideline_text else '[None provided]'}
@@ -33,9 +46,9 @@ Each question must follow this format:
 - 5 answer options (A–E)
 - Indicate the correct answer
 - Provide a 2–3 sentence explanation
-- Include a direct quote from the guideline supporting the answer
+- Include a **direct quote** from the guideline supporting the correct answer
 
-Example of a well-constructed question and why it is effective:
+✅ Example of a well-constructed question and why it is effective:
 
 A 90-year-old woman complains of neck pain and limb weakness following a fall from standing on to the face. A CT-scan of the cervical spine shows only degenerative changes with no fracture.
 
@@ -49,31 +62,45 @@ E) Decreased proprioception and vibration sense in the lower limbs
 
 Correct Answer: A
 
-Explanation: This question requires clinical reasoning — the candidate must:
-- Recognise the likely diagnosis (central cord syndrome),
-- Apply knowledge of typical clinical features,
-- Navigate plausible distractors that represent other spinal syndromes.
-This avoids simple fact recall and instead mirrors consultant-level decision-making in Emergency Medicine.
+Why this is effective:
+The stem gives enough detail to infer central cord syndrome without naming it. The candidate must recognise the pattern and apply judgment. Distractors are plausible and internally consistent.
 
-Example of a poorly constructed question and why it is not effective:
+❌ Poor example 1: Too easy
 
-Clinical Scenario:  
-A 38-year-old man is brought into the Emergency Department (ED) by police, following reports of erratic behavior and aggression at a local shopping center. On arrival, he is vocal, sweating profusely, and displaying significant physical agitation. Attempts at verbal de-escalation have been unsuccessful and you are concerned about his safety and that of others around him. There is a significant sustained physical effort in restraining him, showing no signs of calming down.
+A 38-year-old man is brought to ED by police after erratic behaviour. He is highly agitated and requires restraint.
 
-Lead-in Question:  
-What is the most appropriate next step in the management of this patient's acute behavioral disturbance?
+What is the next step?
 
-A. Request immediate assistance from hospital security personnel  
-B. Administer oral lorazepam for sedation  
-C. Prepare for parenteral sedation with intramuscular ketamine or droperidol  
-D. Move the patient to a quieter area of the ED to continue attempts at verbal de-escalation  
-E. Wait for psychiatric assessment before any further intervention
+A. Call security  
+B. Give oral lorazepam  
+C. Give IM ketamine or droperidol  
+D. Wait for psychiatry  
+E. Move to a quieter area
 
 Correct Answer: C
 
-Why this is a poor question: While the scenario is relevant, the distractors are too basic and clearly inferior to the correct answer. Most trainees would easily eliminate all but one choice without requiring nuanced clinical reasoning. The question does not adequately test synthesis or decision-making beyond surface-level knowledge.
+Why it's poor: Options are not equally plausible. The answer is obvious. No reasoning is required.
+
+❌ Poor example 2: Giveaway language
+
+A 42-year-old woman with bipolar disorder is restrained and remains highly agitated.
+
+Which drug should be used?
+
+A. Oral haloperidol  
+B. IV diazepam  
+C. IM droperidol **as per the guideline recommendation**  
+D. Oral risperidone  
+E. Await psychiatry
+
+Correct Answer: C
+
+Why it’s poor: The correct option is clearly flagged by wording. This reduces the validity of the question.
+
+Avoid these issues in all generated questions.
 """
 
+# Generate questions using GPT-4 Turbo
 def generate_sba(topic, guideline_text, num_questions=1):
     prompt = build_prompt(topic, guideline_text, num_questions)
     try:
