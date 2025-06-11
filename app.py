@@ -2,10 +2,9 @@ import streamlit as st
 import openai
 from PyPDF2 import PdfReader
 
-# Use OpenAI API key stored securely in Streamlit secrets
-openai.api_key = st.secrets["openai_api_key"]
+# Initialise the OpenAI client using the new v1.0+ SDK format
+client = openai.OpenAI(api_key=st.secrets["openai_api_key"])
 
-# Extract text from uploaded PDF
 def extract_text_from_pdf(uploaded_file):
     reader = PdfReader(uploaded_file)
     text = ""
@@ -13,7 +12,6 @@ def extract_text_from_pdf(uploaded_file):
         text += page.extract_text() or ""
     return text
 
-# Build prompt to send to GPT
 def build_prompt(topic, guideline_text, num_questions=1):
     return f"""
 You are a consultant-level Emergency Medicine educator creating advanced Single Best Answer (SBA) questions for the FRCEM Final SBA Exam (UK).
@@ -76,11 +74,10 @@ Correct Answer: C
 Why this is a poor question: While the scenario is relevant, the distractors are too basic and clearly inferior to the correct answer. Most trainees would easily eliminate all but one choice without requiring nuanced clinical reasoning. The question does not adequately test synthesis or decision-making beyond surface-level knowledge.
 """
 
-# Generate SBA questions using OpenAI API
 def generate_sba(topic, guideline_text, num_questions=1):
     prompt = build_prompt(topic, guideline_text, num_questions)
     try:
-        response = openai.ChatCompletion.create(
+        response = client.chat.completions.create(
             model="gpt-4-turbo",
             messages=[{"role": "user", "content": prompt}],
             temperature=0.9
