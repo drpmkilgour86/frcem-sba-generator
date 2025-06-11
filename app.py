@@ -13,13 +13,16 @@ def extract_text_from_pdf(uploaded_file):
         text += page.extract_text() or ""
     return text
 
-# UPDATED build_prompt with num_questions fix
+# UPDATED build_prompt with uniqueness instruction
 def build_prompt(topic, guideline_text, num_questions=1):
     return f"""
 You are a consultant-level Emergency Medicine educator creating advanced Single Best Answer (SBA) questions for the FRCEM Final SBA Exam (UK).
 
 Instructions:
 - Generate **exactly {num_questions} distinct questions**.
+- Each question must be **materially different** from the others in clinical focus and reasoning.
+    - For example, if Question 1 is about sedation with IM ketamine in acute behavioural disturbance (ABD), do **not** reuse IM ketamine as a correct answer in the other questions.
+    - Instead, focus on **different aspects** of the topic (e.g., oral sedation, symptom recognition, risk factors, de-escalation techniques).
 - Base all questions **only** on the content from the uploaded guideline below. Do **not** use general textbook knowledge.
 - Do **not** generate recall-style questions (e.g., definitions or memorised facts).
 - Use **British English healthcare terminology** (e.g., "ED", "A+E", "resuscitation room", "paracetamol"), not American terms (e.g., "ER", "acetaminophen").
