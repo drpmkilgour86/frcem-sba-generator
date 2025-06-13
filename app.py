@@ -1,4 +1,4 @@
-import streamlit as st
+import streamlit as st 
 import openai
 from PyPDF2 import PdfReader
 
@@ -13,44 +13,52 @@ def extract_text_from_pdf(uploaded_file):
         text += page.extract_text() or ""
     return text
 
-# UPDATED build_prompt with uniqueness instruction
+# FINAL UPDATED build_prompt
 def build_prompt(topic, guideline_text, num_questions=1):
-    return f"""
-You are a consultant-level Emergency Medicine educator creating advanced Single Best Answer (SBA) questions for the FRCEM Final SBA Exam (UK).
+    return f"""  
+You are a consultant-level Emergency Medicine educator creating advanced Single Best Answer (SBA) questions for the FRCEM Final SBA examination. You will be provided with text from a clinical guideline and a topic area. Your task is to generate high-quality exam-style questions that are realistic, varied, and directly based on the content of the guideline.
 
-Instructions:
-- Generate **exactly {num_questions} distinct questions**.
-- Each question must be **materially different** from the others in clinical focus and reasoning.
-    - For example, if Question 1 is about sedation with IM ketamine in acute behavioural disturbance (ABD), do **not** reuse IM ketamine as a correct answer in the other questions.
-    - Instead, focus on **different aspects** of the topic (e.g., oral sedation, symptom recognition, risk factors, de-escalation techniques).
-- Base all questions **only** on the content from the uploaded guideline below. Do **not** use general textbook knowledge.
-- Do **not** generate recall-style questions (e.g., definitions or memorised facts).
-- Use **British English healthcare terminology** (e.g., "ED", "A+E", "resuscitation room", "paracetamol"), not American terms (e.g., "ER", "acetaminophen").
-- Questions must assess **clinical judgment**, **interpretation**, or **management decisions**, not superficial recall.
-- To increase difficulty:
-    - Give **clues to the diagnosis in the clinical stem**, but do **not** name the diagnosis directly.
-    - Candidates should have to **infer the diagnosis** and then apply clinical reasoning to select the correct option.
-- Use **specific numerical values** (e.g., HR, Na+, BP) in stems rather than vague terms like “high” or “low”.
-    - Ensure values are **internally consistent** (e.g., if the question is about AF with fast ventricular response, heart rate should be >120 bpm).
-- Avoid giveaway phrases like “as per the guideline recommendation” in any answer option.
-- Ensure all answer choices are:
-    - Plausible
-    - Internally consistent (e.g., do **not** offer “prostatitis” in a question about LUTS in a female)
-    - Mutually exclusive
-    - Equal in complexity and tone
-    - Sufficiently challenging to a senior Emergency Medicine trainee
-- Difficulty target: suitable for UK consultant-level candidates (FRCEM Final SBA), aiming for a facility index ~0.5.
+You must generate **exactly {num_questions} SBA questions** that meet the criteria below.
 
-Guideline excerpt:
-{guideline_text[:2000] if guideline_text else '[None provided]'}
+Each question should:
+- Be written in the style of the FRCEM Final SBA exam.
+- Include a realistic clinical stem based on Emergency Department presentations.
+- Avoid explicitly naming the diagnosis in the stem — instead, present findings that require interpretation.
+- Contain a one-sentence lead-in question that clearly asks for a single best answer.
+- Include exactly 5 answer options labelled A to E, with only one clearly best answer.
+- Provide the correct answer and a brief explanation that references the guideline text provided.
+- Be materially different from previous questions in the same set. For example, if the first question on acute behavioural disturbance is about sedation with ketamine, later questions should focus on other aspects (e.g., oral sedation, symptoms, or legal considerations).
+- Avoid using the same correct answer repeatedly across a question set.
+- Use UK-based terminology and guidelines.
+- Focus on applied clinical decision-making rather than recall of isolated facts.
+- Ensure distractors are all plausible and represent realistic differential diagnoses or common pitfalls.
+- Vary the question type across a set: include diagnosis, immediate management, risk stratification, complication recognition, and ethical/legal reasoning.
+- Include relevant test results (e.g., bloods, imaging, vitals) when appropriate to support clinical reasoning.
 
-Each question must follow this format:
-- Clinical scenario (stem)
-- Lead-in question
-- 5 answer options (A–E)
-- Indicate the correct answer
-- Provide a 2–3 sentence explanation
-- Include a **direct quote** from the guideline supporting the correct answer
+Additional instructions to improve quality:
+- Avoid using ‘All of the above’ or ‘None of the above’ as answer options.
+- Avoid referencing specific guideline names (e.g., NICE, SIGN) or tools (e.g., GRACE, Decision Support Tool) in the stem or lead-in. Instead, reflect their recommendations in the explanation.
+- Avoid including actions that fall outside the scope of Emergency Medicine (e.g., initiating biologic therapy or detaining under the Mental Health Act). If relevant, test knowledge of appropriate referral pathways.
+- Ensure the correct answer represents a decision that an ED doctor could reasonably take in the emergency setting.
+- Each distractor should be independently plausible or incorrect — do not rely on trick formats or obviously irrelevant choices.
+    - For example, do not list “prostatitis” as an answer option in a question about a female with urinary symptoms.
+
+Important constraints:
+- All clinical scenarios must take place in a realistic Emergency Department context in the UK.
+- Only include procedures or decisions that would occur in the ED, not in theatre or elective settings.
+- Base all medical management decisions (e.g., drug choice, dosage, order of actions) strictly on what is in the guideline. Do not invent treatments not mentioned.
+- If the guideline does not contain sufficient information to support a safe and realistic question on a topic, do not make up details. Instead, skip that question.
+
+Internal planning steps:
+Step 1: Read the guideline and identify 3–5 key clinical decision points or themes that can be assessed.
+Step 2: For each question, select a different concept or decision point as its focus.
+Step 3: Ensure each question tests a different aspect of clinical reasoning or guideline application.
+
+Example of strong variation across questions from a sedation guideline:
+Q1: What is the first-line sedative for rapid tranquillisation in ABD?
+Q2: What observations should be performed immediately after IM sedation?
+Q3: What is the legal framework required before sedating a patient without capacity?
+Q4: Which factors increase the risk of respiratory depression following sedation?
 
 ✅ Example of a well-constructed question and why it is effective:
 
@@ -101,7 +109,9 @@ Correct Answer: C
 
 Why it’s poor: The correct option is clearly flagged by wording. This reduces the validity of the question.
 
-Avoid these issues in all generated questions.
+Now generate {num_questions} SBA question(s) on the topic: {topic}
+The relevant guideline text is below:
+\"\"\"{guideline_text}\"\"\"
 """
 
 # Generate questions using GPT-4 Turbo
