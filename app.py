@@ -109,11 +109,25 @@ Correct Answer: C
 
 Why it’s poor: The correct option is clearly flagged by wording. This reduces the validity of the question.
 
+❌ Poor example 3: Combined answer options (invalid format)
+
+You are about to perform a Fascia Iliaca Block on a patient with a fractured neck of the femur. Which of the following is essential to check before proceeding with the block, according to the guidelines?
+
+A) The patient's weight to calculate the correct dosage  
+B) The patient's previous history of allergies to local anaesthetic  
+C) Whether the patient had a meal in the last six hours  
+D) The patient’s blood pressure and respiratory rate  
+E) Both A and B are correct
+
+Correct Answer: E
+
+Why it’s poor: Answer option E combines two other options (A and B), violating the principle that each option must be a standalone, mutually exclusive choice. This reduces clarity and undermines the SBA format.
+
 Now generate {num_questions} SBA question(s) on the topic: {topic}
 The relevant guideline text is below:
 \"\"\"{guideline_text}\"\"\"
 """
-
+    
 # Generate questions using GPT-4 Turbo
 def generate_sba(topic, guideline_text, num_questions=1):
     prompt = build_prompt(topic, guideline_text, num_questions)
