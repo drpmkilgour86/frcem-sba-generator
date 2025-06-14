@@ -160,6 +160,36 @@ Why this explanation is effective:
 - It uses **precise terminology** expected at consultant level
 - It reinforces exam-level reasoning: evaluating statistical validity and bias, not just surface features
 
+Formatting rules (strictly follow):
+- Begin each question with **bold text**: **Question X:** (where X is the number, starting at 1)
+- Present the clinical stem as a paragraph, followed by a separate paragraph for the lead-in question
+    - Do NOT label these as "Stem" or "Lead-in"
+    - Do NOT bold these paragraphs
+- List the 5 answer options (A to E) on **separate lines**
+    - Use **bold capital letters** for A), B), C), D), E) followed by a space, then the text
+    - Do NOT bold the text of the options — only the letter
+- After the options, include a blank line
+- Write **Correct Answer:** in bold, followed by the correct letter
+- On a new line, write **Explanation:** in bold, followed by a full paragraph explaining the answer
+
+Example of correct formatting:
+
+**Question 1:**
+
+A 65-year-old man presents with sudden onset chest pain and dyspnoea. His ECG shows widespread ST elevation and PR depression. His troponin is mildly elevated.
+
+What is the most likely diagnosis?
+
+**A)** Acute myocardial infarction  
+**B)** Pulmonary embolism  
+**C)** Pericarditis  
+**D)** Aortic dissection  
+**E)** Gastro-oesophageal reflux
+
+**Correct Answer:** C
+
+**Explanation:** The ECG changes (widespread ST elevation and PR depression) are classic for pericarditis. Troponin can be mildly elevated due to epicardial inflammation. The clinical presentation and ECG help distinguish this from STEMI or PE.
+
 Now generate {num_questions} SBA question(s) on the topic: {topic}
 The relevant guideline text is below:
 \"\"\"{guideline_text}\"\"\"
