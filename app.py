@@ -122,6 +122,43 @@ E) Both A and B are correct
 Correct Answer: E
 
 Why it’s poor: Answer option E combines two other options (A and B), violating the principle that each option must be a standalone, mutually exclusive choice. This reduces clarity and undermines the SBA format.
+❌ Poor example 4: Answer options that are not materially different
+
+Question: In analyzing a study where the authors report a significant result in men under 60 with witnessed arrests using a new drug for ventricular fibrillation, but no overall effect, what statistical issue should be considered when interpreting these results?
+
+A) The reliability of the subgroup analysis  
+B) The possibility of type II errors due to small subgroup sizes  
+C) The inclusion of too few hypothesis tests  
+D) The potential for random errors affecting the main outcome  
+E) Subgroup analysis suggesting multiple hypothesis testing may have led to a false positive result
+
+Correct Answer: E
+
+Why it’s poor: Options A and E refer to the same underlying concept — concerns about the reliability of subgroup analyses due to multiple comparisons. Option E is simply a more detailed and better-worded version of A. In a well-constructed SBA, each answer option should be **mutually exclusive** and **test a different line of reasoning**. Candidates should not be forced to choose between two similar options that say the same thing with varying levels of detail.
+
+✅ Improved version of the same question:
+
+Question: A trial reports a statistically significant benefit of a drug in men under 60 with witnessed cardiac arrest, but no benefit in the overall population. What is the most important limitation to consider when interpreting the subgroup result?
+
+A) The subgroup analysis was not pre-specified  
+B) The study may be underpowered to detect an overall effect  
+C) The outcome measure was based on retrospective self-report  
+D) Randomisation may not have balanced confounders in the subgroup  
+E) The risk of a false positive result due to multiple subgroup analyses
+
+Correct Answer: E
+
+✅ Example of a high-quality explanation and why it is effective:
+
+Explanation:
+This is a classic example of the statistical risk introduced by multiple subgroup comparisons. When a study performs several subgroup analyses, the chance of finding at least one statistically significant result by chance alone increases (type I error). Although lack of pre-specification (A) is a valid design concern, it is not the core statistical explanation. Option E correctly identifies the primary issue: the subgroup finding is likely a false positive due to multiple hypothesis testing. Other distractors, such as underpowering (B) or randomisation imbalance (D), are less central to the concern and represent plausible but secondary reasoning paths.
+
+Why this explanation is effective:
+- It clearly explains **why the correct answer is correct**
+- It contrasts it with **why each distractor is less appropriate**
+- It identifies **common candidate traps** (e.g., confusing type I vs. type II error)
+- It uses **precise terminology** expected at consultant level
+- It reinforces exam-level reasoning: evaluating statistical validity and bias, not just surface features
 
 Now generate {num_questions} SBA question(s) on the topic: {topic}
 The relevant guideline text is below:
